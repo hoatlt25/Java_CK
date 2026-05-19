@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="cmulex">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/Downloads/cmulex.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

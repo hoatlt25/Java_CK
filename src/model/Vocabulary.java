@@ -11,9 +11,10 @@ public class Vocabulary {
     private int topicID;
     private String type;
     private String status;
+    private String imagePath;
 
     public Vocabulary() {}
-    public Vocabulary(int wordID,String word,String meaning,String pronunciation,String example,int languageID,int topicID,String type,String status) {
+    public Vocabulary(int wordID,String word,String meaning,String pronunciation,String example,int languageID,int topicID,String type,String status,String imagePath) {
         this.wordID = wordID;
         this.word = word;
         this.meaning = meaning;
@@ -24,6 +25,7 @@ public class Vocabulary {
         this.topicID = topicID;
         this.type = type;
         this.status = status;
+        this.imagePath = imagePath;
 
     }
     public int getWordID() {return wordID;}
@@ -45,5 +47,7 @@ public class Vocabulary {
     public void setType(String type) {this.type = type;}
     public String getStatus() {return status;}
     public void setStatus(String status) {this.status = status;}
+    public String getImagePath() {return imagePath;}
+    public void setImagePath(String imagePath) {this.imagePath = imagePath;}
 
 }

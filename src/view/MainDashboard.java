@@ -42,6 +42,7 @@ public class MainDashboard extends JFrame {
        // mainContent.add(new statisticPanel(), "STATISTIC_VIEW");
         mainContent.add(new VocabManagementPanel(), "VOCAB_MANAGEMENT");
         mainContent.add(new UserManagementPanel(), "ADMIN_USER");
+        mainContent.add(new GameSelectTopicPanel(currentUser, mainContent, cardLayout), "GAME_SELECT_TOPIC");
 
         // --- PHÂN QUYỀN: Chỉ nạp trang quản trị nếu là ADMIN (Role 1) ---
         if (currentUser.getRoleID() == 1) {
@@ -92,6 +93,7 @@ public class MainDashboard extends JFrame {
         sidebar.add(Box.createVerticalStrut(5));
         sidebar.add(createMenuButton("Ôn tập", "src/img/clock-rotate-left-solid.png", "REVIEW_VIEW"));
         sidebar.add(Box.createVerticalStrut(5));
+        sidebar.add(createMenuButton("Game", "src/img/gamepad-solid.png", "GAME_SELECT_TOPIC"));
       //  sidebar.add(createMenuButton("Thống kê", "src/img/chart-line-solid.png", "STATISTIC_VIEW"));
 
         // --- PHÂN QUYỀN TRÊN SIDEBAR (Chỉ hiện nếu là ADMIN) ---

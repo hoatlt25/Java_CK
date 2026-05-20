@@ -117,10 +117,12 @@ public class StudyPanel extends JPanel {
     private void speak(String text) {
         if (text == null || text.isEmpty()) return;
 
-        if (text.matches(".*[\\u4e00-\\u9fa5].*")) {
-            utils.AudioService.playChinese(text);
+        // Strip HTML tags if any to speak cleanly
+        String cleanText = text.replaceAll("<[^>]*>", "").trim();
+        if (cleanText.matches(".*[\\u4e00-\\u9fa5].*")) {
+            utils.AudioService.playChinese(cleanText);
         } else {
-            utils.AudioService.playEnglish(text);
+            utils.AudioService.playEnglish(cleanText);
         }
     }
 
@@ -135,27 +137,7 @@ public class StudyPanel extends JPanel {
         }
     }
 
-    private void loadVocabBySelectedTopic() {
-        String selectedName = (String) cbTopics.getSelectedItem();
-        int topicId = -1;
-        if (topicMap != null) {
-            for (Map.Entry<Integer, String> entry : topicMap.entrySet()) {
-                if (entry.getValue().equals(selectedName)) {
-                    topicId = entry.getKey();
-                    break;
-                }
-            }
-        }
-        if (topicId != -1) {
-            List<Vocabulary> list = vocabDAO.getByTopicId(topicId);
-            studyQueue = new LinkedList<>(list);
-            totalInSession = list.size();
-            learnedCount = 0;
-            updateUIWithCard();
-        }
-    }
-
-    // --- CẬP NHẬT TRẠNG THÁI BAN ĐẦU (MẶT TRƯỚC FLASHCARD) ---
+    // --- CẬP NHẬT TRẠNG THÁI BAN ĐẦU (MẶT TRƯỚC CHỨA ẢNH CACHE CỤC BỘ) ---
     private void updateUIWithCard() {
         if (studyQueue.isEmpty()) {
             showFinishedState();
@@ -165,10 +147,22 @@ public class StudyPanel extends JPanel {
         Vocabulary v = studyQueue.getFirst();
         isFlipped = false;
 
-        // MẶT TRƯỚC: Từ vựng chính thức
-        lblWord.setText(v.getWord());
+        // 🌟 TÍNH TOÁN ĐƯỜNG DẪN FILE ẢNH TRONG THƯ MỤC CACHE CỦA MÁY
+        String cachePath = "img/cache/img_" + v.getWordID() + ".png";
+        java.io.File file = new java.io.File(cachePath);
 
-        // FIX FONT THÔNG MINH CHO MẶT TRƯỚC
+        StringBuilder frontHtml = new StringBuilder("<html><center>");
+
+        // Nếu file ảnh đã được luồng ngầm tải về máy thành công, ta chèn thẻ <img> đọc file cục bộ
+        if (file.exists()) {
+            frontHtml.append("<img src='file:").append(cachePath)
+                    .append("' width='140' height='100'><br><br>");
+        }
+
+        frontHtml.append(v.getWord()).append("</center></html>");
+        lblWord.setText(frontHtml.toString());
+
+        // --- KIỂM TRA ĐỔI FONT CHỮ CHỐNG LỖI Ô VUÔNG ---
         if (v.getWord() != null && v.getWord().matches(".*[\\u4e00-\\u9fa5].*")) {
             lblWord.setFont(new Font("Microsoft YaHei", Font.BOLD, 45));
         } else {
@@ -178,7 +172,6 @@ public class StudyPanel extends JPanel {
 
         speak(v.getWord());
 
-        // MẶT TRƯỚC: Hiện phiên âm chuẩn
         String phonetic = v.getPronunciation();
         if (phonetic != null && !phonetic.trim().isEmpty()) {
             lblPhonetic.setText(phonetic + " 🔊");
@@ -187,7 +180,6 @@ public class StudyPanel extends JPanel {
         }
         lblPhonetic.setVisible(true);
 
-        // MẶT SAU: Tạm thời ẩn đi
         lblMean.setVisible(false);
         lblExample.setVisible(false);
 
@@ -197,6 +189,10 @@ public class StudyPanel extends JPanel {
 
         updateStats();
         flashcard.setBackground(Color.WHITE);
+
+        // Ép làm tươi đồ họa đồ họa để hiển thị ảnh ngay lập tức
+        flashcard.revalidate();
+        flashcard.repaint();
     }
 
     // --- LOGIC LẬT THẺ (FLIP CARD) ---
@@ -206,12 +202,11 @@ public class StudyPanel extends JPanel {
         isFlipped = !isFlipped;
 
         if (isFlipped) {
-            // --- CHUYỂN SANG MẶT SAU ---
+            // --- CHUYỂN SANG MẶT SAU (Ẩn ảnh, hiện Nghĩa + Ví dụ) ---
             flashcard.setBackground(new Color(250, 250, 255));
 
             lblWord.setText(v.getWord());
 
-            // Ép font nhỏ cho mặt sau nhưng vẫn phải check tiếng Trung để không bị ô vuông
             if (v.getWord() != null && v.getWord().matches(".*[\\u4e00-\\u9fa5].*")) {
                 lblWord.setFont(new Font("Microsoft YaHei", Font.BOLD, 28));
             } else {
@@ -229,12 +224,20 @@ public class StudyPanel extends JPanel {
             lblExample.setText("<html><center><i style='font-size:14px; color:#636e72'>Ví dụ: " + wordExample + "</i></center></html>");
             lblExample.setVisible(true);
         } else {
-            // --- QUAY TRỞ LẠI MẶT TRƯỚC ---
+            // --- QUAY TRỞ LẠI MẶT TRƯỚC (Đọc lại ảnh từ ổ cứng) ---
             flashcard.setBackground(Color.WHITE);
 
-            lblWord.setText(v.getWord());
+            String cachePath = "img/cache/img_" + v.getWordID() + ".png";
+            java.io.File file = new java.io.File(cachePath);
 
-            // --- ĐOẠN ĐÃ FIX: CHECK FONT KHI QUAY LẠI MẶT TRƯỚC ---
+            StringBuilder frontHtml = new StringBuilder("<html><center>");
+            if (file.exists()) {
+                frontHtml.append("<img src='file:").append(cachePath)
+                        .append("' width='140' height='100'><br><br>");
+            }
+            frontHtml.append(v.getWord()).append("</center></html>");
+            lblWord.setText(frontHtml.toString());
+
             if (v.getWord() != null && v.getWord().matches(".*[\\u4e00-\\u9fa5].*")) {
                 lblWord.setFont(new Font("Microsoft YaHei", Font.BOLD, 45));
             } else {
@@ -254,6 +257,10 @@ public class StudyPanel extends JPanel {
 
             speak(v.getWord());
         }
+
+        // Đảm bảo giao diện mượt mà khi lật qua lật lại
+        flashcard.revalidate();
+        flashcard.repaint();
     }
 
     private void nextCard(boolean isMastered) {
@@ -311,9 +318,13 @@ public class StudyPanel extends JPanel {
         lblExample = new JLabel("", JLabel.CENTER);
         lblExample.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        info.add(lblWord); info.add(Box.createVerticalStrut(15));
-        info.add(lblPhonetic); info.add(lblMean);
-        info.add(Box.createVerticalStrut(20)); info.add(lblExample);
+        // BỐ CỤC CHUẨN: Đẩy chữ lên, HTML sẽ tự động xử lý kẹp ảnh nằm trên đầu chữ
+        info.add(lblWord);
+        info.add(Box.createVerticalStrut(15));
+        info.add(lblPhonetic);
+        info.add(lblMean);
+        info.add(Box.createVerticalStrut(20));
+        info.add(lblExample);
         card.add(info);
 
         card.addMouseListener(new MouseAdapter() {
@@ -464,5 +475,95 @@ public class StudyPanel extends JPanel {
     @Override
     public void removeNotify() {
         super.removeNotify();
+    }
+
+    // =========================================================================
+    // 🌟 KHU VỰC CÁC HÀM XỬ LÝ ẢNH CACHE VÀ ĐA LUỒNG NGẦM (THÂN THIỆN HỆ THỐNG) 🌟
+    // =========================================================================
+
+    // Hàm tải ảnh từ link mạng lưu thẳng thành file vật lý trong ổ cứng máy tính
+    private void downloadImageLocal(String urlString, String fileName) {
+        try {
+            // Tự động tạo thư mục src/img/cache nếu trên máy chưa có sẵn
+            java.io.File dir = new java.io.File("img/cache/");
+            if (!dir.exists()) {
+                dir.mkdirs();
+            }
+
+            // Kiểm tra xem ảnh này trước đó đã được tải về máy chưa, nếu có rồi thì bỏ qua không tải lại
+            java.io.File destinationFile = new java.io.File(dir, fileName);
+            if (destinationFile.exists()) return;
+
+            java.net.URL url = new java.net.URL(urlString);
+            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+
+            // Bộ Header vượt tường lửa chuẩn cấu hình Chrome browser chống lỗi chặn HTTP 403
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+            conn.setRequestProperty("Accept", "image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8");
+
+            conn.connect();
+
+            if (conn.getResponseCode() == java.net.HttpURLConnection.HTTP_OK) {
+                try (java.io.InputStream in = conn.getInputStream();
+                     java.io.FileOutputStream out = new java.io.FileOutputStream(destinationFile)) {
+
+                    byte[] buffer = new byte[4096];
+                    int bytesRead;
+                    while ((bytesRead = in.read(buffer)) != -1) {
+                        out.write(buffer, 0, bytesRead);
+                    }
+                }
+
+                // Sau khi tải xong 1 file ảnh vật lý, lập tức báo cho luồng UI render giao diện thời gian thực
+                SwingUtilities.invokeLater(() -> {
+                    flashcard.revalidate();
+                    flashcard.repaint();
+                });
+            }
+        } catch (Exception e) {
+            System.out.println("Lỗi tải file ảnh ngầm: " + e.getMessage());
+        }
+    }
+
+    // Hàm bốc dữ liệu và quản lý kích hoạt đa luồng tải ảnh bất đồng bộ độc quyền
+    private void loadVocabBySelectedTopic() {
+        String selectedName = (String) cbTopics.getSelectedItem();
+        int topicId = -1;
+        if (topicMap != null) {
+            for (Map.Entry<Integer, String> entry : topicMap.entrySet()) {
+                if (entry.getValue().equals(selectedName)) {
+                    topicId = entry.getKey();
+                    break;
+                }
+            }
+        }
+        if (topicId != -1) {
+            List<Vocabulary> list = vocabDAO.getByTopicId(topicId);
+            studyQueue = new LinkedList<>(list);
+            totalInSession = list.size();
+            learnedCount = 0;
+
+            // 🌟 KHỞI CHẠY LUỒNG NGẦM TẢI TRƯỚC TOÀN BỘ ẢNH KHI CHỌN TOPIC (ĐÃ THÊM DELAY AN TOÀN)
+            new Thread(() -> {
+                for (Vocabulary v : list) {
+                    if (v.getImagePath() != null && v.getImagePath().startsWith("http")) {
+                        // Tải ảnh về đặt tên là: img_MãTừVựng.png
+                        downloadImageLocal(v.getImagePath(), "img_" + v.getWordID() + ".png");
+
+                        // 🌟 MẸO UX: Nghỉ 300 mili-giây trước khi tải từ tiếp theo để tránh bị Server chặn ngầm
+                        try {
+                            Thread.sleep(300);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                        }
+                    }
+                }
+                // Sau khi quét và tải xong xuôi, ép giao diện hiển thị tươi mới lại lần nữa
+                SwingUtilities.invokeLater(() -> updateUIWithCard());
+            }).start();
+
+            updateUIWithCard();
+        }
     }
 }

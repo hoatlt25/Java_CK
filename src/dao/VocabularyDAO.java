@@ -10,13 +10,13 @@ public class VocabularyDAO {
 
     public List<Vocabulary> getByTopicId(int topicId) {
         List<Vocabulary> list = new ArrayList<>();
-        // Tên cột: word_id, word, meaning, topic_id...
-        String sql = "SELECT * FROM Vocabulary WHERE topic_id = ?";
+        String sql = "SELECT TOP 20 * FROM Vocabulary WHERE topic_id = ? ORDER BY NEWID()";
         try (Connection con = DatabaseConnection.getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, topicId);
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
+                // 🌟 ĐÃ SỬA: Dùng hàm map chuẩn để bốc trọn gói dữ liệu bao gồm cả imagePath
                 list.add(mapResultSetToVocabulary(rs));
             }
         } catch (SQLException e) { e.printStackTrace(); }
@@ -74,7 +74,8 @@ public class VocabularyDAO {
                 rs.getInt("language_id"),
                 rs.getInt("topic_id"),
                 rs.getString("type"),
-                rs.getString("status")
+                rs.getString("status"),
+                rs.getString("imagePath")
         );
     }
 
@@ -100,7 +101,8 @@ public class VocabularyDAO {
                             rs.getInt("language_id"),
                             rs.getInt("topic_id"),
                             rs.getString("type"),
-                            rs.getString("status")
+                            rs.getString("status"),
+                            rs.getString("imagePath")
                     );
                 }
             }
@@ -160,6 +162,7 @@ public class VocabularyDAO {
                 v.setTopicID(rs.getInt("topic_id"));
                 v.setType(rs.getString("type"));
                 v.setStatus(rs.getString("status"));
+                v.setImagePath(rs.getString("imagePath"));
 
                 list.add(v);
             }
